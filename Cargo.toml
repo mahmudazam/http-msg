@@ -1,0 +1,6 @@
+[package]
+name = "http-msg"
+version = "0.1.0"
+authors = ["Mahmud Azam <mfa256@mail.usask.ca>"]
+
+[dependencies]
