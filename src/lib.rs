@@ -44,13 +44,20 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let mut msg = "GET /hello HTTP/1.1\r\n".as_bytes();
-        let parse_result = Request::parse(&mut msg);
+        let mut msg = String::new();
+        msg.push_str("GET /hello HTTP/1.1\r\n");
+        msg.push_str("Content-Type: text/html\r\n");
+        msg.push_str("Accept-Charset: utf-8\r\n\r\n");
+        let parse_result = Request::parse(&mut msg.as_bytes());
         assert!(parse_result.is_ok());
         let parse = parse_result.unwrap();
         assert_eq!(parse.method, "GET");
         assert_eq!(parse.target, "/hello");
         assert_eq!(parse.version, "1.1");
+        assert_eq!(parse.get_header("Content-Type"),
+                   Some(&String::from("text/html")));
+        assert_eq!(parse.get_header("Accept-Charset"),
+                   Some(&String::from("utf-8")));
     }
 }
 

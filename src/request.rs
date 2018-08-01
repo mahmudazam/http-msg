@@ -39,16 +39,27 @@ impl Request {
         let mut reader = BufReader::new(source);
         let mut buf = String::new();
         reader.read_line(&mut buf)
-              .map(|_| buf.as_str().split_whitespace())
-              .map(|mut split| {
-                       let method = split.next().unwrap_or(&"");
-                       let target = split.next().unwrap_or(&"");
-                       let version = &split.next()
-                                           .unwrap_or(&"")
-                                           .replace("HTTP/", "");
-                       Request::new(method, target, version)
-                   })
-              .map_err(|_| String::from("Could not split start line."))
+            .map(|_| buf.as_str().split_whitespace())
+            .map(|mut split| {
+                     let method = split.next().unwrap_or(&"");
+                     let target = split.next().unwrap_or(&"");
+                     let version = &split.next()
+                                         .unwrap_or(&"")
+                                         .replace("HTTP/", "");
+                     Request::new(method, target, version)
+                 })
+            .map_err(|_| String::from("Could not parse start line."))
+            .map(|mut req| {
+                     for ln_result in reader.lines() {
+                         let ln = ln_result.unwrap_or(String::new())
+                                           .replace("\r\n", "");
+                         let mut split = ln.split(":");
+                         req.set_header(
+                            split.next().unwrap_or("").trim(),
+                            split.next().unwrap_or("").trim());
+                     }
+                     req
+                 })
     }
 }
 
