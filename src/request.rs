@@ -1,6 +1,12 @@
 
 use std::collections::HashMap;
 
+use std::io::{
+    Read,
+    BufRead,
+    BufReader,
+};
+
 pub struct Request {
     pub method:  String,
     pub target:  String,
@@ -27,6 +33,22 @@ impl Request {
     pub fn set_header(&mut self, name: &str, value: &str) -> &Self {
         self.headers.insert(String::from(name), String::from(value));
         self
+    }
+
+    pub fn parse(source: &mut Read) -> Result<Request, String> {
+        let mut reader = BufReader::new(source);
+        let mut buf = String::new();
+        reader.read_line(&mut buf)
+              .map(|_| buf.as_str().split_whitespace())
+              .map(|mut split| {
+                       let method = split.next().unwrap_or(&"");
+                       let target = split.next().unwrap_or(&"");
+                       let version = &split.next()
+                                           .unwrap_or(&"")
+                                           .replace("HTTP/", "");
+                       Request::new(method, target, version)
+                   })
+              .map_err(|_| String::from("Could not split start line."))
     }
 }
 

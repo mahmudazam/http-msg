@@ -41,5 +41,16 @@ mod tests {
                 name, value,
                 body));
     }
+
+    #[test]
+    fn test_parse() {
+        let mut msg = "GET /hello HTTP/1.1\r\n".as_bytes();
+        let parse_result = Request::parse(&mut msg);
+        assert!(parse_result.is_ok());
+        let parse = parse_result.unwrap();
+        assert_eq!(parse.method, "GET");
+        assert_eq!(parse.target, "/hello");
+        assert_eq!(parse.version, "1.1");
+    }
 }
 
