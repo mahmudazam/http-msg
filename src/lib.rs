@@ -13,7 +13,7 @@ mod tests {
         let req = Request::new("GET", "/hello", "1.1");
         assert_eq!(req.method, String::from("GET"));
         assert_eq!(req.target, String::from("/hello"));
-        assert_eq!(req.version, String::from("HTTP/1.1"));
+        assert_eq!(req.version, String::from("1.1"));
     }
 
     #[test]
@@ -27,5 +27,19 @@ mod tests {
                    Some(&String::from(value)));
     }
 
+    #[test]
+    fn test_req_to_string() {
+        let name = "Content-Type";
+        let value = "text/html";
+        let body = "Hello, World!";
+        let mut req = Request::new("GET", "/hello", "1.1");
+        req.set_header(name, value);
+        req.body.append(&mut body.as_bytes().to_vec());
+        assert_eq!(req.to_string(),
+            format!("{}\r\n{}: {}\r\n\r\n{}\r\n\r\n",
+                "GET /hello HTTP/1.1",
+                name, value,
+                body));
+    }
 }
 
