@@ -35,31 +35,56 @@ impl Request {
         self
     }
 
-    pub fn parse(source: &mut Read) -> Result<Request, String> {
-        let mut reader = BufReader::new(source);
+    fn _read_start_line(reader: &mut BufReader<&mut Read>)
+            -> Result<Request, String> {
         let mut buf = String::new();
         reader.read_line(&mut buf)
+            .map_err(|_| String::from("Could not read start line."))
             .map(|_| buf.as_str().split_whitespace())
-            .map(|mut split| {
-                     let method = split.next().unwrap_or(&"");
-                     let target = split.next().unwrap_or(&"");
-                     let version = &split.next()
-                                         .unwrap_or(&"")
-                                         .replace("HTTP/", "");
-                     Request::new(method, target, version)
-                 })
-            .map_err(|_| String::from("Could not parse start line."))
-            .map(|mut req| {
-                     for ln_result in reader.lines() {
-                         let ln = ln_result.unwrap_or(String::new())
-                                           .replace("\r\n", "");
-                         let mut split = ln.split(":");
-                         req.set_header(
-                            split.next().unwrap_or("").trim(),
-                            split.next().unwrap_or("").trim());
-                     }
-                     req
-                 })
+            .and_then(|mut split| {
+                let method = split.next().unwrap_or(&"");
+                let target = split.next().unwrap_or(&"");
+                let version = &split.next().unwrap_or(&"")
+                                           .replace("HTTP/", "");
+                if "" == method || "" == target || "" == version {
+                    Err(String::from("Invalid start line"))
+                } else {
+                    Ok(Request::new(method, target, version))
+                }
+            })
+    }
+
+    fn _read_headers(reader: &mut BufReader<&mut Read>, mut req: Request)
+            -> Result<Request, String> {
+        let mut header_buf = String::new();
+        while let Ok(size) = reader.read_line(&mut header_buf) {
+            if size > 2  {
+                let mut split = header_buf.as_str().trim().split(":");
+                let key = split.next().unwrap_or("").trim();
+                let val = split.next().unwrap_or("").trim();
+                req.set_header(key, val);
+            } else {
+                break;
+            }
+            header_buf.clear();
+        };
+        Ok(req)
+    }
+
+    fn _read_body(reader: &mut BufReader<&mut Read>, req: Request)
+            -> Result<Request, String> {
+        match req.get_header("Content-Length") {
+            Some(n) => { ; },
+            None => { ; }
+        }
+        Ok(req)
+    }
+
+    pub fn parse(source: &mut Read) -> Result<Request, String> {
+        let mut reader = BufReader::new(source);
+        Self::_read_start_line(&mut reader)
+            .and_then(|req| Request::_read_headers(&mut reader, req))
+            .and_then(|req| Request::_read_body(&mut reader, req))
     }
 }
 
@@ -67,14 +92,13 @@ impl ToString for Request {
     fn to_string(&self) -> String {
         let start_line = format!("{} {} HTTP/{}\r\n",
                             self.method, self.target, self.version);
-        let headers = self.headers
-            .iter()
-            .fold(String::from(""),
-                  |acc, next| format!("{}{}: {}\r\n", acc, next.0, next.1))
+        let headers = self.headers.iter().fold(String::from(""),
+            |acc, next| format!("{}{}: {}\r\n", acc, next.0, next.1))
             + "\r\n";
-        let body = String::from_utf8(self.body.clone());
-        format!("{}{}{}\r\n\r\n",
-            start_line, headers, body.unwrap_or(String::new()))
+        let body = String::from_utf8(self.body.clone())
+                          .unwrap_or(String::from("[Body is not string]"));
+        format!("{}{}{}\r\n", start_line, headers, if "" == body
+            { String::from("") } else { format!("{}\r\n", body) })
     }
 }
 

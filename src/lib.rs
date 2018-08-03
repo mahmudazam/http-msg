@@ -35,6 +35,7 @@ mod tests {
         let mut req = Request::new("GET", "/hello", "1.1");
         req.set_header(name, value);
         req.body.append(&mut body.as_bytes().to_vec());
+        print!("To String:\n{}", req.to_string());
         assert_eq!(req.to_string(),
             format!("{}\r\n{}: {}\r\n\r\n{}\r\n\r\n",
                 "GET /hello HTTP/1.1",
@@ -48,9 +49,11 @@ mod tests {
         msg.push_str("GET /hello HTTP/1.1\r\n");
         msg.push_str("Content-Type: text/html\r\n");
         msg.push_str("Accept-Charset: utf-8\r\n\r\n");
+        msg.push_str("\r\nHello, World!\r\n\r\n");
         let parse_result = Request::parse(&mut msg.as_bytes());
         assert!(parse_result.is_ok());
         let parse = parse_result.unwrap();
+        print!("To String After Parse:\n{}", parse.to_string());
         assert_eq!(parse.method, "GET");
         assert_eq!(parse.target, "/hello");
         assert_eq!(parse.version, "1.1");
