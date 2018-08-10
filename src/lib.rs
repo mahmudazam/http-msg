@@ -44,7 +44,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse() {
+    fn test_req_parse() {
         let mut msg = String::new();
         msg.push_str("GET /hello HTTP/1.1\r\n");
         msg.push_str("Content-Type: text/html\r\n");
@@ -67,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_exact() {
+    fn test_req_parse_exact() {
         let mut msg = String::new();
         msg.push_str("GET /hello HTTP/1.1\r\n");
         msg.push_str("Content-Length: 17\r\n\r\n");
@@ -101,6 +101,37 @@ mod tests {
             .set_header("bar", "bar_val");
         assert_eq!(res.get_header("foo"), Some(&String::from("foo_val")));
         assert_eq!(res.get_header("bar"), Some(&String::from("bar_val")));
+    }
+
+    #[test]
+    fn test_res_set_body() {
+        let version = "1.1";
+        let res = Response::new(&version, 200)
+            .set_body("Hello, World!\r\n".as_bytes());
+        assert_eq!(res.body, "Hello, World!\r\n".as_bytes());
+    }
+
+    #[test]
+    fn test_res_serialize() {
+        let version = "1.1";
+        let res = Response::new(&version, 200)
+            .set_header("foo", "foo_val")
+            .set_header("bar", "bar_val")
+            .set_body("Hello, World!\r\n\r\n".as_bytes());
+        let bytes = res.serialize();
+
+        let start_line = "HTTP/1.1 200 OK\r\n";
+        let headers1 = "foo: foo_val\r\nbar: bar_val\r\n\r\n";
+        let headers2 = "bar: bar_val\r\nfoo: foo_val\r\n\r\n";
+        let body = "Hello, World!\r\n\r\n";
+        let exp_bytes1 = format!("{}{}{}", start_line, headers1, body);
+        let exp_bytes2 = format!("{}{}{}", start_line, headers2, body);
+
+        if bytes != exp_bytes1.as_str().as_bytes() {
+            assert_eq!(bytes, exp_bytes2.as_str().as_bytes());
+        } else {
+            assert_eq!(bytes, exp_bytes1.as_str().as_bytes());
+        }
     }
 }
 
