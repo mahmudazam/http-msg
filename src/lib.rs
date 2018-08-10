@@ -83,5 +83,24 @@ mod tests {
         let body = String::from_utf8(parse.body).unwrap_or(String::new());
         assert_eq!(body, String::from("Hello, World!\r\n\r\n"));
     }
+
+    #[test]
+    fn test_res_new() {
+        let res = Response::new("1.1", 200);
+        assert_eq!(res.version, String::from("1.1"));
+        assert_eq!(res.response_code, 200);
+        assert_eq!(res.response_phrase, String::from("OK"));
+        assert_eq!(res.body.len(), 0);
+    }
+
+    #[test]
+    fn test_res_headers() {
+        let version = "1.1";
+        let res = Response::new(&version, 200)
+            .set_header("foo", "foo_val")
+            .set_header("bar", "bar_val");
+        assert_eq!(res.get_header("foo"), Some(&String::from("foo_val")));
+        assert_eq!(res.get_header("bar"), Some(&String::from("bar_val")));
+    }
 }
 
