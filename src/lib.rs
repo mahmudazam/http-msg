@@ -35,7 +35,6 @@ mod tests {
         let mut req = Request::new("GET", "/hello", "1.1");
         req.set_header(name, value);
         req.body.append(&mut body.as_bytes().to_vec());
-        print!("To String:\n{}", req.to_string());
         assert_eq!(req.to_string(),
             format!("{}\r\n{}: {}\r\n\r\n{}\r\n\r\n",
                 "GET /hello HTTP/1.1",
@@ -45,15 +44,14 @@ mod tests {
 
     #[test]
     fn test_req_parse() {
+        // Test parse_header:
         let mut msg = String::new();
         msg.push_str("GET /hello HTTP/1.1\r\n");
         msg.push_str("Content-Type: text/html\r\n");
         msg.push_str("Accept-Charset: utf-8\r\n\r\n");
-        msg.push_str("Hello, World!\r\n\r\n");
-        let parse_result = Request::parse(&mut msg.as_bytes());
+        let parse_result = Request::parse_header(&mut msg.as_bytes());
         assert!(parse_result.is_ok());
         let parse = parse_result.unwrap();
-        print!("To String After Parse:\n{}", parse.to_string());
         assert_eq!(parse.method, "GET");
         assert_eq!(parse.target, "/hello");
         assert_eq!(parse.version, "1.1");
@@ -61,6 +59,11 @@ mod tests {
                    Some(&String::from("text/html")));
         assert_eq!(parse.get_header("Accept-Charset"),
                    Some(&String::from("utf-8")));
+        // Test parse_body:
+        let parse_body_result = parse.parse_body(
+            &mut "Hello, World!\r\n\r\n".as_bytes());
+        assert!(parse_body_result.is_ok());
+        let parse = parse_body_result.unwrap();
         assert_eq!(parse.body.len(), 15);
         let body = String::from_utf8(parse.body).unwrap_or(String::new());
         assert_eq!(body, String::from("Hello, World!\r\n"));
@@ -68,17 +71,22 @@ mod tests {
 
     #[test]
     fn test_req_parse_exact() {
+        // Test parse_header:
         let mut msg = String::new();
         msg.push_str("GET /hello HTTP/1.1\r\n");
         msg.push_str("Content-Length: 17\r\n\r\n");
-        msg.push_str("Hello, World!\r\n\r\n");
-        let parse_result = Request::parse(&mut msg.as_bytes());
+        let parse_result = Request::parse_header(&mut msg.as_bytes());
         assert!(parse_result.is_ok());
         let parse = parse_result.unwrap();
         assert_eq!(
             usize::from_str_radix(
                 parse.get_header("Content-Length").unwrap(), 10),
             Ok(17));
+        // Test parse_body:
+        let parse_body_result = parse.parse_body(
+            &mut "Hello, World!\r\n\r\n".as_bytes());
+        assert!(parse_body_result.is_ok());
+        let parse = parse_body_result.unwrap();
         assert_eq!(parse.body.len(), 17);
         let body = String::from_utf8(parse.body).unwrap_or(String::new());
         assert_eq!(body, String::from("Hello, World!\r\n\r\n"));

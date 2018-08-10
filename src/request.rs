@@ -35,11 +35,15 @@ impl Request {
         self
     }
 
-    pub fn parse(source: &mut Read) -> Result<Request, String> {
+    pub fn parse_header(source: &mut Read) -> Result<Request, String> {
         let mut reader = BufReader::new(source);
         _read_start_line(&mut reader)
             .and_then(|req| _read_headers(&mut reader, req))
-            .and_then(|req| _read_body(&mut reader, req))
+    }
+
+    pub fn parse_body(self, source: &mut Read) -> Result<Self, String> {
+        let mut reader = BufReader::new(source);
+        _read_body(&mut reader, self)
     }
 }
 
@@ -82,8 +86,8 @@ fn _read_headers(reader: &mut BufReader<&mut Read>, mut req: Request)
     while let Ok(size) = reader.read_line(&mut header_buf) {
         if size > 2  {
             let mut split = header_buf.as_str().trim().split(":");
-            let key = split.next().unwrap_or("").trim();
-            let val = split.next().unwrap_or("").trim();
+            let key = split.next().unwrap_or("INVALID").trim();
+            let val = split.next().unwrap_or("INVALID").trim();
             req.set_header(key, val);
         } else {
             break;
@@ -102,11 +106,16 @@ fn _read_body(reader: &mut BufReader<&mut Read>, mut req: Request)
         usize::from_str_radix(content_length_str, 10)
     };
     match content_length {
-        Ok(n) => {
-            let mut limited_reader = reader.take(n as u64);
+        Ok(expected_len) => {
+            let mut limited_reader = reader.take(expected_len as u64);
             match limited_reader.read_to_end(&mut req.body) {
-                Ok(_)  => {
-                    Ok(req)
+                Ok(bytes_read)  => {
+                    if expected_len == bytes_read {
+                        Ok(req)
+                    } else {
+                        Err(String::from(
+                            "Mismatch between bytes read in Content-Length"))
+                    }
                 },
                 Err(_) => Err(String::from(
                     "Error reading Content-Length bytes from stream")),
