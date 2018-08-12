@@ -31,12 +31,12 @@ mod tests {
     fn test_req_to_string() {
         let name = "Content-Type";
         let value = "text/html";
-        let body = "Hello, World!";
+        let body = "Hello, World!\r\n\r\n";
         let mut req = Request::new("GET", "/hello", "1.1");
         req.set_header(name, value);
         req.body.append(&mut body.as_bytes().to_vec());
         assert_eq!(req.to_string(),
-            format!("{}\r\n{}: {}\r\n\r\n{}\r\n\r\n",
+            format!("{}\r\n{}: {}\r\n\r\n{}",
                 "GET /hello HTTP/1.1",
                 name, value,
                 body));
@@ -64,9 +64,9 @@ mod tests {
             &mut "Hello, World!\r\n\r\n".as_bytes());
         assert!(parse_body_result.is_ok());
         let parse = parse_body_result.unwrap();
-        assert_eq!(parse.body.len(), 15);
+        assert_eq!(parse.body.len(), 17);
         let body = String::from_utf8(parse.body).unwrap_or(String::new());
-        assert_eq!(body, String::from("Hello, World!\r\n"));
+        assert_eq!(body, String::from("Hello, World!\r\n\r\n"));
     }
 
     #[test]

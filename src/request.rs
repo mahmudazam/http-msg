@@ -56,8 +56,7 @@ impl ToString for Request {
             + "\r\n";
         let body = String::from_utf8(self.body.clone())
                           .unwrap_or(String::from("[Body is not string]"));
-        format!("{}{}{}\r\n", start_line, headers, if "" == body
-            { String::from("") } else { format!("{}\r\n", body) })
+        format!("{}{}{}", start_line, headers, body)
     }
 }
 
@@ -131,6 +130,7 @@ fn _read_body(reader: &mut BufReader<&mut Read>, mut req: Request)
                 }
                 body_buf_str.clear();
             }
+            req.body.extend_from_slice("\r\n".as_bytes());
             Ok(req)
         },
     }
